@@ -1091,7 +1091,7 @@ runs on test_CT {
 	 * We could stop as soon as all expected SI are received, but then we might miss SI that we don't expect and
 	 * that might be sent afterwards. So rather give a generous timeout and be quite sure to catch all SI.
 	 */
-	f_sleep(5.0);
+	f_sleep(1.0);
 	log("RSL ", bts_idx, " SYSTEM INFORMATION: ", g_system_information[bts_idx]);
 
 	deactivate(sysinfo);
@@ -7246,6 +7246,27 @@ testcase TC_fh_params_si4_cbch() runs on test_CT {
  */
 
 control {
+if (true) {
+	execute( TC_ho_int() );
+
+	execute( TC_ho_out_of_this_bsc() );
+	execute( TC_ho_out_fail_no_msc_response() );
+	execute( TC_ho_out_fail_rr_ho_failure() );
+	execute( TC_ho_out_fail_no_result_after_ho_cmd() );
+
+	execute( TC_ho_into_this_bsc() );
+	execute( TC_ho_in_fail_msc_clears() );
+	execute( TC_ho_in_fail_msc_clears_after_ho_detect() );
+	execute( TC_ho_in_fail_no_detect() );
+	execute( TC_ho_in_fail_no_detect2() );
+	execute( TC_ho_neighbor_config_1() );
+	execute( TC_ho_neighbor_config_2() );
+	execute( TC_ho_neighbor_config_3() );
+	execute( TC_ho_neighbor_config_4() );
+	execute( TC_ho_neighbor_config_5() );
+	execute( TC_ho_neighbor_config_6() );
+	execute( TC_ho_neighbor_config_7() );
+} else {
 	/* CTRL interface testing */
 	execute( TC_ctrl_msc_connection_status() );
 	execute( TC_ctrl_msc0_connection_status() );
@@ -7470,6 +7491,7 @@ control {
 	execute( TC_fh_params_imm_ass() );
 	execute( TC_fh_params_assignment_cmd() );
 	execute( TC_fh_params_si4_cbch() );
+}
 }
 
 }
