@@ -263,6 +263,7 @@ function f_cbsp_write(uint16_t msg_id, uint16_t ser_no,
 	} else {
 		rx := tr_CBSP_WRITE_CBS_FAIL(msg_id, ser_no, fail_list, *, success_list, channel_ind);
 	}
+	log("EXPECTING ", tr_CBSP_Recv(g_cbsp_conn_id[0], rx));
 	alt {
 	[] CBSP[0].receive(tr_CBSP_Recv(g_cbsp_conn_id[0], rx)) {
 		setverdict(pass);
@@ -295,6 +296,7 @@ function f_cbsp_replace(uint16_t msg_id, uint16_t new_ser_no, uint16_t old_ser_n
 		rx := tr_CBSP_REPLACE_CBS_FAIL(msg_id, new_ser_no, old_ser_no, fail_list, *, success_list,
 					       channel_ind);
 	}
+	log("f_cbsp_replace() EXPECTING ", tr_CBSP_Recv(g_cbsp_conn_id[0], rx));
 	alt {
 	[] CBSP[0].receive(tr_CBSP_Recv(g_cbsp_conn_id[0], rx)) {
 		setverdict(pass);
@@ -323,6 +325,7 @@ function f_cbsp_kill(uint16_t msg_id, uint16_t ser_no, template (omit) uint8_t c
 		rx := tr_CBSP_KILL_FAIL(msg_id, ser_no, fail_list, compl_list:=*, cell_list:=success_list,
 					channel_ind:=channel_ind);
 	}
+	log("EXPECTING cbsp ", rx);
 	alt {
 	[] CBSP[0].receive(tr_CBSP_Recv(g_cbsp_conn_id[0], rx)) {
 		setverdict(pass);
@@ -694,6 +697,9 @@ testcase TC_cbsp_emerg_write_bts_cgi_cchan() runs on cbsp_test_CT {
 
 	f_cbsp_write_emerg(g_cbsp_msg_id, g_cbsp_ser_no, cell_list);
 	var template (present) octetstring tr_apdu := f_gen_etws_pn(g_cbsp_ser_no, g_cbsp_msg_id);
+
+	log("EXPECTING ", tr_ASP_RSL_UD(tr_RSL_OSMO_ETWS_CMD(t_RslChanNr_PCH_AGCH(0), tr_apdu)));
+
 	timer T := 5.0;
 	T.start;
 	alt {
