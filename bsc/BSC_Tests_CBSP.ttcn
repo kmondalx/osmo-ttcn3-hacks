@@ -123,6 +123,7 @@ private function f_init(float guard_timeout := 30.0) runs on cbsp_test_CT {
 private function f_cbsp_init_client() runs on cbsp_test_CT {
 	f_init();
 	f_vty_set_cbsp_mode(BSCVTY, "server");
+	f__logp(BSCVTY, "f_cbsp_init_client()");
 	CBSP_Adapter.f_connect(mp_bsc_ip, mp_bsc_cbsp_port, "", -1);
 	CBSP[0].receive(tr_CBSP_Recv(?, tr_CBSP_RESTART(?, CBSP_BC_MSGT_CBS, ?)));
 	setverdict(pass);

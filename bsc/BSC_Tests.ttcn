@@ -927,7 +927,7 @@ function f_init_vty(charstring id := "foo") runs on test_CT {
 			  "sccp-timer iar " & int2str(g_bsc_sccp_timer_iar)});
 }
 
-private function f__logp(TELNETasp_PT pt, charstring log_msg)
+function f__logp(TELNETasp_PT pt, charstring log_msg)
 {
 	// log on TTCN3 log output
 	log(log_msg);
@@ -935,7 +935,7 @@ private function f__logp(TELNETasp_PT pt, charstring log_msg)
 	f_vty_transceive(pt, "logp lglobal notice " & log_msg);
 }
 
-private function f_logp(charstring log_msg) runs on MSC_ConnHdlr
+function f_logp(charstring log_msg) runs on MSC_ConnHdlr
 {
 	f__logp(BSCVTY, log_msg);
 }
