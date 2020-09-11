@@ -7628,7 +7628,7 @@ testcase TC_lcs_location_request_for_idle_ms() runs on test_CT {
  */
 
 control {
-if (true) {
+if (false) {
 	execute( TC_lcs_location_request_for_idle_ms() );
 } else {
 	/* CTRL interface testing */
