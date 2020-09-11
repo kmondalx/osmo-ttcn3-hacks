@@ -319,8 +319,7 @@ private function f_bssap_le_reset(SCCP_PAR_Address peer, SCCP_PAR_Address own) r
 	[] as_reset_ack();
 	[] BSSAP_LE.receive { repeat };
 	[] T.timeout {
-		setverdict(fail, "Timeout waiting for RESET-ACK after sending RESET");
-		mtc.stop;
+		log("BSSAP-LE / Lb: Timeout waiting for RESET-ACK after sending RESET (ignoring)");
 		}
 	}
 }
