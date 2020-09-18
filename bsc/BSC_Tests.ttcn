@@ -7437,7 +7437,7 @@ testcase TC_fh_params_si4_cbch() runs on test_CT {
 
 control {
 if (true) {
-	execute( TC_ho_int() );
+	execute( TC_lcs_location_request_for_idle_ms() );
 } else {
 	/* CTRL interface testing */
 	execute( TC_ctrl_msc_connection_status() );
