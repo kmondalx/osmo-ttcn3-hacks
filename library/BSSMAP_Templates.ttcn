@@ -1693,6 +1693,65 @@ return template (present) BIT3 {
 	}
 }
 
+template (value) BSSMAP_IE_LocationType ts_BSSMAP_IE_LocationType
+:= {
+	elementIdentifier := '44'O,
+	lengthIndicator := 1,
+	locationInformation := '00'O,
+	positioningMethod := omit
+}
 
+template (value) PDU_BSSAP ts_BSSMAP_Perform_Location_Request(hexstring imsi_digits,
+							      template (omit) BSSMAP_IE_CellIdentifier cellIdentifier := omit
+							      )
+modifies ts_BSSAP_BSSMAP := {
+	pdu := {
+		bssmap := {
+			performLocationRequest := {
+				messageType := '2B'O,
+				locationType := ts_BSSMAP_IE_LocationType,
+				cellIdentifier := cellIdentifier,
+				classmarkInformationType3 := omit,
+				lCS_ClientType := omit,
+				chosenChannel := omit,
+				lCS_Priority := omit,
+				lCS_QOS := omit,
+				gPS_AssistanceData := omit,
+				aPDU := omit,
+				iMSI := ts_BSSMAP_Imsi(imsi_digits),
+				iMEI := omit,
+				gANSS_LocationType := omit,
+				gANSS_AssistanceData := omit
+			}
+		}
+	}
+}
+
+template BSSMAP_IE_LocationEstimate tr_BSSMAP_IE_LocationEstimate(template octetstring geo_loc := ?)
+:= {
+	elementIdentifier := '45'O,
+	lengthIndicator := ?,
+	geographicLocation := geo_loc
+}
+
+template PDU_BSSAP tr_BSSMAP_Perform_Location_Response(template BSSMAP_IE_LocationEstimate locationEstimate := *,
+						       template BSSMAP_IE_PositioningData positioningData := *,
+						       template BSSMAP_IE_LCSCause lCS_Cause := *
+						      )
+modifies tr_BSSAP_BSSMAP := {
+	pdu := {
+		bssmap := {
+			performLocationResponse := {
+				messageType := '2D'O,
+				locationEstimate := locationEstimate,
+				positioningData := positioningData,
+				decipheringKeys := *,
+				lCS_Cause := lCS_Cause,
+				velocityEstimate := *,
+				gANSS_PositioningData := *
+			}
+		}
+	}
+}
 
 } with { encode "RAW" };

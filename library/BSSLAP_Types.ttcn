@@ -493,7 +493,15 @@ tr_BSSLAP_Abort(template (present) BSSLAP_Cause cause) := {
 	}
 }
 
-
+template (present) BSSLAP_PDU tr_BSSLAP_TA_Layer3(template BSSLAP_IE_TimingAdvance timing_advance := *) := {
+	ta_layer3 := {
+		msg_type := BSSLAP_MSGT_TA_LAYER3,
+		timing_advance := timing_advance,
+		meas_rep := *,
+		enh_meas_rep := *,
+		meas_cell_id_list := *
+	}
+}
 
 template (value) BSSLAP_IE_TimingAdvance ts_BSSLAP_IE_TA(uint8_t ta) := {
 	iei := BSSLAP_IEI_TA,

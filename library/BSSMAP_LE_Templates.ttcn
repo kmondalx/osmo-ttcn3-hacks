@@ -156,9 +156,9 @@ template (present) BSSMAP_LE_IE_LocationType tr_BSSMAP_LE_LocType(template (pres
 
 
 /* Section 9.1 */
-template (value) PDU_BSSAP_LE ts_BSMAP_LE_PerfLocReq(BSSMAP_LE_LocInfo loc_info := BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC,
-						     template (value) BSSMAP_IE_CellIdentifier cell_id,
-						     template (omit) hexstring imsi)
+template (value) PDU_BSSAP_LE ts_BSSMAP_LE_PerfLocReq(BSSMAP_LE_LocInfo loc_info := BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC,
+						      template (value) BSSMAP_IE_CellIdentifier cell_id,
+						      template (omit) hexstring imsi)
 
 modifies ts_BSSAP_LE_BSSMAP := {
 	pdu := {
@@ -183,9 +183,9 @@ modifies ts_BSSAP_LE_BSSMAP := {
 		}
 	}
 }
-template (present) PDU_BSSAP_LE tr_BSMAP_LE_PerfLocReq(BSSMAP_LE_LocInfo loc_info := BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC,
-						       template (present) BSSMAP_IE_CellIdentifier cell_id,
-						       template hexstring imsi)
+template (present) PDU_BSSAP_LE tr_BSSMAP_LE_PerfLocReq(BSSMAP_LE_LocInfo loc_info := BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC,
+							template (present) BSSMAP_IE_CellIdentifier cell_id,
+							template hexstring imsi)
 modifies tr_BSSAP_LE_BSSMAP := {
 	pdu := {
 		bssmap := {
@@ -212,9 +212,9 @@ modifies tr_BSSAP_LE_BSSMAP := {
 
 
 /* Section 9.2 */
-template (value) PDU_BSSAP_LE ts_BSMAP_LE_PerfLocResp(BSSMAP_LE_LocInfo loc_info := BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC,
-						      template (omit) octetstring geo_loc,
-						      template (omit) BSSMAP_LE_LcsCause cause)
+template (value) PDU_BSSAP_LE ts_BSSMAP_LE_PerfLocResp(BSSMAP_LE_LocInfo loc_info := BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC,
+						       template (omit) octetstring geo_loc,
+						       template (omit) BSSMAP_LE_LcsCause cause)
 
 modifies ts_BSSAP_LE_BSSMAP := {
 	pdu := {
@@ -231,9 +231,9 @@ modifies ts_BSSAP_LE_BSSMAP := {
 		}
 	}
 }
-template (present) PDU_BSSAP_LE tr_BSMAP_LE_PerfLocResp(template BSSMAP_LE_LocInfo loc_info := BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC,
-							template octetstring geo_loc,
-							template BSSMAP_LE_LcsCause cause)
+template (present) PDU_BSSAP_LE tr_BSSMAP_LE_PerfLocResp(template BSSMAP_LE_LocInfo loc_info := BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC,
+							 template octetstring geo_loc,
+							 template BSSMAP_LE_LcsCause cause)
 modifies tr_BSSAP_LE_BSSMAP := {
 	pdu := {
 		bssmap := {

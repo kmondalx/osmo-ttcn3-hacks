@@ -684,6 +684,7 @@ runs on BSSAP_LE_Emulation_CT {
 }
 
 /* helper function for clients to register their IMSI/TMSI */
+/* FIXME: there is no TMSI in BSSMAP-LE */
 function f_bssap_le_register_imsi(hexstring imsi, template (omit) OCT4 tmsi_or_omit)
 runs on BSSAP_LE_ConnHdlr {
 	var OCT4 tmsi;

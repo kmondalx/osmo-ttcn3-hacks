@@ -30,6 +30,8 @@ import from BSSAP_Types all;
 import from RAN_Adapter all;
 import from BSSAP_LE_Adapter all;
 import from BSSAP_LE_CodecPort all;
+import from BSSAP_LE_Types all;
+import from BSSLAP_Types all;
 import from BSSAP_CodecPort all;
 import from BSSMAP_Templates all;
 import from IPA_Emulation all;
@@ -63,6 +65,7 @@ import from GSM_RR_Types all;
 
 import from SCCP_Templates all;
 import from BSSMAP_Templates all;
+import from BSSMAP_LE_Templates all;
 
 import from SCCPasp_Types all;
 
@@ -958,7 +961,7 @@ private function f__logp(TELNETasp_PT pt, charstring log_msg)
 	// log on TTCN3 log output
 	log(log_msg);
 	// log in stderr log
-	f_vty_transceive(pt, "logp lglobal notice " & log_msg);
+	f_vty_transceive(pt, "logp lglobal notice TTCN3 f_logp(): " & log_msg);
 }
 
 private function f_logp(charstring log_msg) runs on MSC_ConnHdlr
@@ -6039,6 +6042,22 @@ function f_tmsi_nri(integer nri_v, octetstring base_tmsi := '42000023'O, integer
 template MobileIdentityLV ts_MI_TMSI_NRI_LV(integer nri_v, integer nri_bitlen := 10) :=
 	ts_MI_TMSI_LV(tmsi := f_tmsi_nri(nri_v, nri_bitlen := nri_bitlen));
 
+private function f_expect_lchan_rel(RSL_DCHAN_PT rsl) runs on MSC_ConnHdlr {
+	interleave {
+	[] rsl.receive(tr_RSL_DATA_REQ(g_chan_nr, ?, decmatch tr_RRM_RR_RELEASE)) {
+			f_logp("Got RSL RR Release");
+		}
+	[] rsl.receive(tr_RSL_DEACT_SACCH(g_chan_nr)) {
+			f_logp("Got RSL Deact SACCH");
+		}
+	[] rsl.receive(tr_RSL_MsgTypeD(RSL_MT_RF_CHAN_REL)) {
+			f_logp("Got RSL RF Chan Rel, sending Rel Ack");
+			rsl.send(ts_RSL_RF_CHAN_REL_ACK(g_chan_nr));
+			break;
+		}
+	}
+}
+
 private function f_perform_clear(RSL_DCHAN_PT rsl) runs on MSC_ConnHdlr {
 	f_logp("MSC instructs BSC to clear channel");
 	BSSAP.send(ts_BSSMAP_ClearCommand(0));
@@ -6061,7 +6080,7 @@ private function f_perform_clear(RSL_DCHAN_PT rsl) runs on MSC_ConnHdlr {
 	}
 }
 
-private function f_perform_compl_l3(RSL_DCHAN_PT rsl, template PDU_ML3_MS_NW l3_info, boolean do_clear := true)
+private function f_perform_compl_l3(RSL_DCHAN_PT rsl, template PDU_ML3_MS_NW l3_info, boolean do_clear := true, boolean expect_bssmap_l3 := true)
 runs on MSC_ConnHdlr {
 	timer T := 10.0;
 	var octetstring l3_enc := enc_PDU_ML3_MS_NW(valueof(l3_info));
@@ -6104,34 +6123,36 @@ runs on MSC_ConnHdlr {
 	rsl.send(ts_RSL_EST_IND(g_chan_nr, valueof(g_pars.link_id), l3_enc));
 
 
-	f_logp("expect BSSAP Complete Layer 3 Info at MSC");
-	var template PDU_BSSAP exp_l3_compl;
-	exp_l3_compl := tr_BSSMAP_ComplL3()
-	if (g_pars.aoip == false) {
-		exp_l3_compl.pdu.bssmap.completeLayer3Information.codecList := omit;
-	} else {
-		exp_l3_compl.pdu.bssmap.completeLayer3Information.codecList := ?;
-	}
+	if (expect_bssmap_l3) {
+		f_logp("expect BSSAP Complete Layer 3 Info at MSC");
+		var template PDU_BSSAP exp_l3_compl;
+		exp_l3_compl := tr_BSSMAP_ComplL3()
+		if (g_pars.aoip == false) {
+			exp_l3_compl.pdu.bssmap.completeLayer3Information.codecList := omit;
+		} else {
+			exp_l3_compl.pdu.bssmap.completeLayer3Information.codecList := ?;
+		}
 
-	var PDU_BSSAP bssap;
-	T.start;
-	alt {
-	[] BSSAP.receive(exp_l3_compl) -> value bssap {
-		f_logp("received expected Complete Layer 3 Info at MSC");
-		log("rx exp_l3_compl = ", bssap);
+		var PDU_BSSAP bssap;
+		T.start;
+		alt {
+		[] BSSAP.receive(exp_l3_compl) -> value bssap {
+			f_logp("received expected Complete Layer 3 Info at MSC");
+			log("rx exp_l3_compl = ", bssap);
+			}
+		[] BSSAP.receive(tr_BSSMAP_ComplL3) {
+			Misc_Helpers.f_shutdown(__BFILE__, __LINE__, fail, "Received non-matching COMPLETE LAYER 3 INFORMATION");
+			}
+		[] T.timeout {
+			Misc_Helpers.f_shutdown(__BFILE__, __LINE__, fail, "Timeout waiting for COMPLETE LAYER 3 INFORMATION");
+			}
 		}
-	[] BSSAP.receive(tr_BSSMAP_ComplL3) {
-		Misc_Helpers.f_shutdown(__BFILE__, __LINE__, fail, "Received non-matching COMPLETE LAYER 3 INFORMATION");
-		}
-	[] T.timeout {
-		Misc_Helpers.f_shutdown(__BFILE__, __LINE__, fail, "Timeout waiting for COMPLETE LAYER 3 INFORMATION");
-		}
-	}
 
-	/* start ciphering, if requested */
-	if (ispresent(g_pars.encr)) {
-		f_logp("start ciphering");
-		f_cipher_mode(g_pars.encr.enc_alg, g_pars.encr.enc_key);
+		/* start ciphering, if requested */
+		if (ispresent(g_pars.encr)) {
+			f_logp("start ciphering");
+			f_cipher_mode(g_pars.encr.enc_alg, g_pars.encr.enc_key);
+		}
 	}
 
 	if (do_clear) {
@@ -7427,6 +7448,177 @@ testcase TC_fh_params_si4_cbch() runs on test_CT {
 	f_shutdown_helper();
 }
 
+template (value) PDU_BSSAP_LE ts_BSSMAP_LE_BSSLAP(template (value) BSSLAP_PDU bsslap)
+	:= ts_BSSMAP_LE_ConnInfo(BSSMAP_LE_PROT_BSSLAP, data := enc_BSSLAP_PDU(valueof(bsslap)));
+
+template PDU_BSSAP_LE tr_BSSMAP_LE_BSSLAP(template octetstring bsslap_data)
+	:= tr_BSSMAP_LE_ConnInfo(BSSMAP_LE_PROT_BSSLAP, data := bsslap_data);
+
+private function f_lcs_location_request_for_active_ms(boolean do_ta_request := false) runs on MSC_ConnHdlr {
+	f_sleep(1.0);
+
+	f_establish_fully(omit, omit);
+	f_bssap_le_register_imsi(g_pars.imsi, omit);
+
+	f__logp(BSCVTY, "f_tc_lcs_location_request_for_active_ms start");
+
+	BSSAP.send(valueof(ts_BSSMAP_Perform_Location_Request(g_pars.imsi,
+					ts_CellId_CGI('262'H, '42'H, 23, 42))));
+
+	var PDU_BSSAP_LE plr;
+	BSSAP_LE.receive(tr_BSSMAP_LE_PerfLocReq(BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC, ?, ?)) -> value(plr);
+
+	if (not do_ta_request) {
+		/* verify TA Layer 3 in APDU. First the APDU type (BSSLAP), then the BSSLAP data contents. */
+		var template BSSMAP_LE_IE_APDU expect_apdu := tr_BSSMAP_LE_APDU(BSSMAP_LE_PROT_BSSLAP, ?);
+		if (not match(plr.pdu.bssmap.perf_loc_req.bsslap_apdu, expect_apdu)) {
+			log("EXPECTING BSSMAP-LE APDU IE ", expect_apdu);
+			log("GOT BSSMAP-LE APDU IE ", plr.pdu.bssmap.perf_loc_req.bsslap_apdu);
+			setverdict(fail, "BSSMAP-LE APDU IE is not as expected");
+			mtc.stop;
+		}
+		var template BSSLAP_PDU expect_ta_layer3 := tr_BSSLAP_TA_Layer3(tr_BSSLAP_IE_TA(0));
+		var BSSLAP_PDU bsslap := dec_BSSLAP_PDU(plr.pdu.bssmap.perf_loc_req.bsslap_apdu.data);
+		if (not match(bsslap, expect_ta_layer3)) {
+			log("EXPECTING BSSLAP TA Layer 3: ", expect_ta_layer3);
+			log("GOT BSSLAP: ", bsslap);
+			setverdict(fail, "BSSLAP is not as expected");
+			mtc.stop;
+		}
+		/* OsmoBSC directly sent the TA as BSSLAP APDU in the BSSMAP-LE Perform Location Request to the SMLC. The SMLC
+		 * has no need to request the TA from the BSC and directly responds. */
+	} else {
+		/* SMLC wants to ask the TA from the BSC explicitly in a BSSLAP TA Request message */
+		BSSAP_LE.send(ts_BSSMAP_LE_BSSLAP(ts_BSSLAP_TA_Req));
+		var PDU_BSSAP_LE ta_resp;
+		BSSAP_LE.receive(tr_BSSMAP_LE_BSSLAP(?)) -> value(ta_resp);
+		var BSSLAP_PDU bsslap := dec_BSSLAP_PDU(ta_resp.pdu.bssmap.co_info.bsslap_apdu.data);
+		var template BSSLAP_PDU expect_ta_resp := tr_BSSLAP_TA_Resp(0, 0);
+		if (not match(bsslap, expect_ta_resp)) {
+			log("EXPECTING BSSLAP TA Response: ", expect_ta_resp);
+			log("GOT BSSLAP: ", bsslap);
+			setverdict(fail, "BSSLAP is not as expected");
+			mtc.stop;
+		}
+	}
+
+	/* SMLC got the TA from the BSC, now responds with geo information data. */
+
+	/* geo: this is an Ellipsoid point with uncertainty circle, encoded as in 3GPP TS 23.032 §7.3.2. */
+	var octetstring geo := '10b0646d0d5f6627'O;
+	BSSAP_LE.send(ts_BSSMAP_LE_PerfLocResp(BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC, geo, omit));
+
+	BSSAP.receive(tr_BSSMAP_Perform_Location_Response(tr_BSSMAP_IE_LocationEstimate(geo)));
+
+	f_sleep(2.0);
+	f__logp(BSCVTY, "f_tc_lcs_location_request_for_active_ms done");
+	setverdict(pass);
+}
+
+private function f_tc_lcs_location_request_for_active_ms(charstring id) runs on MSC_ConnHdlr {
+	f_lcs_location_request_for_active_ms(false);
+}
+testcase TC_lcs_location_request_for_active_ms() runs on test_CT {
+	var MSC_ConnHdlr vc_conn;
+	var TestHdlrParams pars := f_gen_test_hdlr_pars();
+
+	f_init(1, true);
+	f_sleep(1.0);
+
+	pars.sccp_addr_msc := g_bssap[0].sccp_addr_own;
+	pars.sccp_addr_bsc := g_bssap[0].sccp_addr_peer;
+
+	vc_conn := f_start_handler(refers(f_tc_lcs_location_request_for_active_ms), pars);
+	vc_conn.done;
+}
+
+private function f_tc_lcs_location_request_for_active_ms_ta_req(charstring id) runs on MSC_ConnHdlr {
+	f_lcs_location_request_for_active_ms(true);
+}
+testcase TC_lcs_location_request_for_active_ms_ta_req() runs on test_CT {
+	var MSC_ConnHdlr vc_conn;
+	var TestHdlrParams pars := f_gen_test_hdlr_pars();
+
+	f_init(1, true);
+	f_sleep(1.0);
+
+	pars.sccp_addr_msc := g_bssap[0].sccp_addr_own;
+	pars.sccp_addr_bsc := g_bssap[0].sccp_addr_peer;
+
+	vc_conn := f_start_handler(refers(f_tc_lcs_location_request_for_active_ms_ta_req), pars);
+	vc_conn.done;
+}
+
+private function f_tc_lcs_location_request_for_idle_ms(charstring id) runs on MSC_ConnHdlr {
+	f_sleep(1.0);
+
+	f_MscConnHdlr_init(g_pars.media_nr, "127.0.0.2", "127.0.0.3", FR_AMR);
+	f_bssap_le_register_imsi(g_pars.imsi, omit);
+
+	/* Register to receive the Paging Command */
+	var RslChannelNr new_chan_nr := valueof(t_RslChanNr0(1, RSL_CHAN_NR_Bm_ACCH));
+	g_chan_nr := new_chan_nr;
+	f_rslem_register(0, g_chan_nr);
+
+	f__logp(BSCVTY, "f_tc_lcs_location_request_for_idle_ms start");
+	BSSAP.send(ts_BSSAP_Conn_Req(g_pars.sccp_addr_bsc, g_pars.sccp_addr_msc,
+				     valueof(ts_BSSMAP_Perform_Location_Request(g_pars.imsi,
+										ts_CellId_CGI('001'H, '01'H, 1, 0)))));
+	BSSAP.receive(RAN_Conn_Prim:MSC_CONN_PRIM_CONF_IND);
+
+	var PDU_BSSAP_LE plr;
+	BSSAP_LE.receive(tr_BSSMAP_LE_PerfLocReq(BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC, ?, ?)) -> value(plr);
+
+	/* SMLC wants to ask the TA from the BSC explicitly in a BSSLAP TA Request message */
+	BSSAP_LE.send(ts_BSSMAP_LE_BSSLAP(ts_BSSLAP_TA_Req));
+
+	/* OsmoBSC needs to Page */
+	RSL.receive(tr_RSL_PAGING_CMD(tr_MI_IMSI(g_pars.imsi)));
+	f__logp(BSCVTY, "got Paging Command");
+
+	/* MS requests channel. Since the Paging was for LCS, the Paging Response does not trigger a Complete Layer 3 to
+	 * the MSC, and releases the lchan directly. */
+	f_perform_compl_l3(RSL, ts_PAG_RESP(valueof(ts_MI_IMSI_LV(g_pars.imsi))), do_clear := false, expect_bssmap_l3 := false);
+	f_expect_lchan_rel(RSL);
+
+	/* From the Paging Response, the TA is now known to the BSC, and it responds to the SMLC. */
+
+	var PDU_BSSAP_LE ta_resp;
+	BSSAP_LE.receive(tr_BSSMAP_LE_BSSLAP(?)) -> value(ta_resp);
+	var BSSLAP_PDU bsslap := dec_BSSLAP_PDU(ta_resp.pdu.bssmap.co_info.bsslap_apdu.data);
+	var template BSSLAP_PDU expect_ta_resp := tr_BSSLAP_TA_Resp(0, 0);
+	if (not match(bsslap, expect_ta_resp)) {
+		log("EXPECTING BSSLAP TA Response: ", expect_ta_resp);
+		log("GOT BSSLAP: ", bsslap);
+		setverdict(fail, "BSSLAP is not as expected");
+		mtc.stop;
+	}
+
+	/* SMLC got the TA from the BSC, now responds with geo information data. */
+
+	/* geo: this is an Ellipsoid point with uncertainty circle, encoded as in 3GPP TS 23.032 §7.3.2. */
+	var octetstring geo := '10b0646d0d5f6627'O;
+	BSSAP_LE.send(ts_BSSMAP_LE_PerfLocResp(BSSMAP_LE_LOC_INFO_CURRENT_GEOGRAPHIC_LOC, geo, omit));
+
+	BSSAP.receive(tr_BSSMAP_Perform_Location_Response(tr_BSSMAP_IE_LocationEstimate(geo)));
+	f_sleep(2.0);
+	f__logp(BSCVTY, "f_tc_lcs_location_request_for_idle_ms done");
+	setverdict(pass);
+}
+testcase TC_lcs_location_request_for_idle_ms() runs on test_CT {
+	var MSC_ConnHdlr vc_conn;
+	var TestHdlrParams pars := f_gen_test_hdlr_pars();
+
+	f_init(1, true);
+	f_sleep(1.0);
+
+	pars.sccp_addr_msc := g_bssap[0].sccp_addr_own;
+	pars.sccp_addr_bsc := g_bssap[0].sccp_addr_peer;
+
+	vc_conn := f_start_handler(refers(f_tc_lcs_location_request_for_idle_ms), pars);
+	vc_conn.done;
+}
+
 /* Dyn PDCH todo:
    * activate OSMO as TCH/F
    * activate OSMO as TCH/H
@@ -7670,6 +7862,10 @@ if (true) {
 	execute( TC_fh_params_assignment_cmd() );
 	execute( TC_fh_params_handover_cmd() );
 	execute( TC_fh_params_si4_cbch() );
+
+	execute( TC_lcs_location_request_for_active_ms() );
+	execute( TC_lcs_location_request_for_active_ms_ta_req() );
+	execute( TC_lcs_location_request_for_idle_ms() );
 }
 }
 

@@ -112,6 +112,7 @@ function f_bssap_le_adapter_init(inout BSSAP_LE_Adapter ba, in BSSAP_LE_Configur
 }
 
 function f_bssap_le_adapter_start(inout BSSAP_LE_Adapter ba) {
+	log("Starting BSSAP_LE adapter with ", ba.sccp_pars);
 	ba.vc_SCCP.start(SCCPStart(ba.sccp_pars));
 }
 
