@@ -14,6 +14,7 @@ module GBProxy_Tests {
 
 import from General_Types all;
 import from Osmocom_Types all;
+import from GSM_Types all;
 import from Native_Functions all;
 import from NS_Types all;
 import from NS_Emulation all;
@@ -40,6 +41,7 @@ modulepar {
 	/* IP/port on which we run our internal GSUP/HLR emulation */
 	NSConfigurations_SGSN mp_nsconfig_sgsn := {
 		{
+			remote_proto := PCUIF_ADDR_TYPE_IPV4,
 			local_udp_port := 7777,
 			local_ip := "127.0.0.1",
 			remote_udp_port := 23000,
@@ -52,6 +54,7 @@ modulepar {
 	};
 	NSConfigurations_PCU mp_nsconfig_pcu := {
 		{
+			remote_proto := PCUIF_ADDR_TYPE_IPV4,
 			local_udp_port := 21010,
 			local_ip := "127.0.0.1",
 			remote_udp_port := 23000,
@@ -62,6 +65,7 @@ modulepar {
 			handle_sns := false
 		},
 		{
+			remote_proto := PCUIF_ADDR_TYPE_IPV4,
 			local_udp_port := 21011,
 			local_ip := "127.0.0.1",
 			remote_udp_port := 23000,
@@ -72,6 +76,7 @@ modulepar {
 			handle_sns := false
 		},
 		{
+			remote_proto := PCUIF_ADDR_TYPE_IPV4,
 			local_udp_port := 21012,
 			local_ip := "127.0.0.1",
 			remote_udp_port := 23000,
@@ -261,10 +266,10 @@ function f_init(BcdMccMnc mcc_mnc := '262F42'H) runs on test_CT {
 	};
 
 	f_init_vty();
+	f_init_gb_sgsn(g_sgsn[0], "GbProxy_Test-SGSN0", 0);
 	f_init_gb_pcu(g_pcu[0], "GbProxy_Test-PCU0", 0);
 	f_init_gb_pcu(g_pcu[1], "GbProxy_Test-PCU1", 1);
 	f_init_gb_pcu(g_pcu[2], "GbProxy_Test-PCU2", 2);
-	f_init_gb_sgsn(g_sgsn[0], "GbProxy_Test-SGSN0", 0);
 }
 
 function f_cleanup() runs on test_CT {
@@ -274,7 +279,6 @@ function f_cleanup() runs on test_CT {
 type function void_fn(charstring id) runs on BSSGP_ConnHdlr;
 
 /* helper function to create, connect and start a BSSGP_ConnHdlr component */
-/*
 function f_start_handler(void_fn fn, charstring id, GbInstances_PCU pcu, GbInstances_SGSN sgsn, integer imsi_suffix,
 			 float t_guard := 30.0)
 runs on test_CT return BSSGP_ConnHdlr {
@@ -289,26 +293,25 @@ runs on test_CT return BSSGP_ConnHdlr {
 		tlli := f_gprs_tlli_random(),
 		tlli_old := omit,
 		ra := omit,
-		bssgp_cell_id := { gb[0].cfg.cell_id, gb[1].cfg.cell_id, gb[2].cfg.cell_id },
-		rnc_send_initial_ue := true,
-		vec := omit,
-		net := net_pars,
-		t_guard := t_guard,
-		sccp_addr_local := omit,
-		sccp_addr_peer := omit
+		bssgp_cell_id := { pcu[0].cfg.cell_id, pcu[1].cfg.cell_id, pcu[2].cfg.cell_id },
+		t_guard := t_guard
 	};
 
 	vc_conn := BSSGP_ConnHdlr.create(id);
-	connect(vc_conn:PCU[0], gb[0].vc_BSSGP:BSSGP_SP);
-	connect(vc_conn:PCU_SIG[0], gb[0].vc_BSSGP:BSSGP_SP_SIG);
-	connect(vc_conn:PCU_PROC[0], gb[0].vc_BSSGP:BSSGP_PROC);
-	connect(vc_conn:PCU[1], gb[1].vc_BSSGP:BSSGP_SP);
-	connect(vc_conn:PCU_SIG[1], gb[1].vc_BSSGP:BSSGP_SP_SIG);
-	connect(vc_conn:PCU_PROC[1], gb[1].vc_BSSGP:BSSGP_PROC);
-	connect(vc_conn:PCU[2], gb[2].vc_BSSGP:BSSGP_SP);
-	connect(vc_conn:PCU_SIG[2], gb[2].vc_BSSGP:BSSGP_SP_SIG);
-	connect(vc_conn:PCU_PROC[2], gb[2].vc_BSSGP:BSSGP_PROC);
-
+	// PDU side
+	connect(vc_conn:PCU[0], pcu[0].vc_BSSGP:BSSGP_SP);
+	connect(vc_conn:PCU_SIG[0], pcu[0].vc_BSSGP:BSSGP_SP_SIG);
+	connect(vc_conn:PCU_PROC[0], pcu[0].vc_BSSGP:BSSGP_PROC);
+	connect(vc_conn:PCU[1], pcu[1].vc_BSSGP:BSSGP_SP);
+	connect(vc_conn:PCU_SIG[1], pcu[1].vc_BSSGP:BSSGP_SP_SIG);
+	connect(vc_conn:PCU_PROC[1], pcu[1].vc_BSSGP:BSSGP_PROC);
+	connect(vc_conn:PCU[2], pcu[2].vc_BSSGP:BSSGP_SP);
+	connect(vc_conn:PCU_SIG[2], pcu[2].vc_BSSGP:BSSGP_SP_SIG);
+	connect(vc_conn:PCU_PROC[2], pcu[2].vc_BSSGP:BSSGP_PROC);
+	// SGSN side
+	connect(vc_conn:SGSN[0], sgsn[0].vc_BSSGP:BSSGP_SP);
+	connect(vc_conn:SGSN_SIG[0], sgsn[0].vc_BSSGP:BSSGP_SP_SIG);
+	connect(vc_conn:SGSN_PROC[0], sgsn[0].vc_BSSGP:BSSGP_PROC);
 
 	vc_conn.start(f_handler_init(fn, id, pars));
 	return vc_conn;
@@ -320,7 +323,29 @@ private altstep as_Tguard() runs on BSSGP_ConnHdlr {
 		mtc.stop;
 	}
 }
-*/
+
+/* first function called in every ConnHdlr */
+private function f_handler_init(void_fn fn, charstring id, BSSGP_ConnHdlrPars pars)
+runs on BSSGP_ConnHdlr {
+	/* do some common stuff like setting up g_pars */
+	g_pars := pars;
+
+	llc := f_llc_create(false);
+
+	/* register with BSSGP core */
+	f_bssgp_client_register_generic(g_pars.imsi, g_pars.tlli, g_pars.bssgp_cell_id[0], PCU_PROC[0]);
+	f_bssgp_client_register_generic(g_pars.imsi, g_pars.tlli, g_pars.bssgp_cell_id[1], PCU_PROC[1]);
+	f_bssgp_client_register_generic(g_pars.imsi, g_pars.tlli, g_pars.bssgp_cell_id[2], PCU_PROC[2]);
+
+	g_Tguard.start(pars.t_guard);
+	activate(as_Tguard());
+
+	/* call the user-supplied test case function */
+	fn.apply(id);
+	f_bssgp_client_unregister_generic(g_pars.imsi, PCU_PROC[0]);
+	f_bssgp_client_unregister_generic(g_pars.imsi, PCU_PROC[1]);
+	f_bssgp_client_unregister_generic(g_pars.imsi, PCU_PROC[2]);
+}
 
 /* TODO:
    * Detach without Attach
@@ -340,6 +365,37 @@ testcase TC_wait_ns_up() runs on test_CT {
 	f_init();
 	f_sleep(20.0);
 	f_cleanup();
+}
+
+private function f_TC_BVC(charstring id) runs on BSSGP_ConnHdlr {
+	f_sleep(20.0);
+}
+
+testcase TC_BVC() runs on test_CT {
+	var BSSGP_ConnHdlr vc_conn;
+	f_init();
+
+	vc_conn := f_start_handler(refers(f_TC_BVC), testcasename(), g_pcu, g_sgsn, 51);
+	vc_conn.done;
+
+	f_cleanup();
+}
+
+/* Establish BSSGP connection to PCU */
+function f_bssgp_establish() runs on BSSGP_ConnHdlr {
+	timer T:= 10.0;
+
+	T.start
+	alt {
+	[] SGSN[0].receive(t_BssgpStsInd(?, ?, BVC_S_UNBLOCKED)) { }
+	[] SGSN[0].receive { repeat; }
+	[] T.timeout {
+		setverdict(fail, "Timeout establishing BSSGP connection");
+		mtc.stop;
+		}
+	}
+	T.stop
+	log("BSSGP successfully initialized");
 }
 
 friend function f_bssgp_suspend(integer ran_idx := 0) runs on BSSGP_ConnHdlr return OCT1 {
@@ -385,7 +441,7 @@ friend function f_bssgp_resume(OCT1 susp_ref, integer ran_idx := 0) runs on BSSG
 
 
 control {
-	execute( TC_wait_ns_up() );
+	execute( TC_BVC() );
 }
 
 
